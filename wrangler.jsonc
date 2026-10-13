@@ -15,6 +15,14 @@
       "service": "simulator-misclib"
     }
   ],
+  // カスタムドメイン。Cloudflare 上に misclib.com のゾーンがあれば
+  // デプロイ時に DNS レコードと証明書が自動で作られる。
+  "routes": [
+    {
+      "pattern": "simu.misclib.com",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": true
   }
