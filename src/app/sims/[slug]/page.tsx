@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getSimEntry, simEntries } from "@/lib/sims";
 import { simModules } from "@/sims";
-import { CompanyNote } from "@/components/CompanyNote";
 
 /** 一覧にない slug はビルド時に 404 にする (全ページ静的生成) */
 export const dynamicParams = false;
@@ -51,10 +50,6 @@ export default async function SimPage(props: PageProps<"/sims/[slug]">) {
 
       <div className="prose max-w-3xl">
         <Article />
-      </div>
-
-      <div className="max-w-3xl">
-        <CompanyNote />
       </div>
     </article>
   );

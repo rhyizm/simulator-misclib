@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CompanyNote } from "@/components/CompanyNote";
 import { formatDate, simEntries } from "@/lib/sims";
 import { COMPANY } from "@/lib/site";
 
@@ -81,8 +80,12 @@ export default function Home() {
             「この前提を変えたらどうなる？」と考える材料にしてください。
           </p>
           <p>結果はあくまで思考実験です。現実の制度設計や安全対策の根拠として使えるものではありません。</p>
+          <p>
+            作っているのは東京の小さな会社、
+            <a href={COMPANY.url}>{COMPANY.name}</a>
+            です。本業の合間の遊びとして、気が向いたときに更新します。
+          </p>
         </div>
-        <CompanyNote />
       </section>
     </div>
   );
