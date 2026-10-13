@@ -25,7 +25,7 @@ export default function Home() {
           </span>
           <span>
             By{" "}
-            <a href={COMPANY.url} className="text-foreground underline underline-offset-4 hover:text-accent">
+            <a href={COMPANY.url} target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-accent">
               {COMPANY.name}
             </a>
           </span>
@@ -82,7 +82,7 @@ export default function Home() {
           <p>結果はあくまで思考実験です。現実の制度設計や安全対策の根拠として使えるものではありません。</p>
           <p>
             作っているのは東京の小さな会社、
-            <a href={COMPANY.url}>{COMPANY.name}</a>
+            <a href={COMPANY.url} target="_blank" rel="noopener noreferrer">{COMPANY.name}</a>
             です。本業の合間の遊びとして、気が向いたときに更新します。
           </p>
         </div>

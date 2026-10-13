@@ -18,7 +18,7 @@ export function SiteFooter() {
             </div>
             <p className="text-sm text-soft">
               {SITE_NAME} は{" "}
-              <a href={COMPANY.url} className="underline underline-offset-4 hover:text-accent">
+              <a href={COMPANY.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-accent">
                 {COMPANY.name}
               </a>{" "}
               の遊びプロジェクトです。

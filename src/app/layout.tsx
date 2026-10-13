@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
             <div className="flex items-center gap-3">
               <a
-                href={COMPANY.url}
+                href={COMPANY.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 font-mono text-base font-semibold tracking-wide text-foreground hover:text-accent"
                 title={`${COMPANY.name} のサイトへ`}
               >
@@ -58,7 +58,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/#about" className="hover:text-foreground">
                 この実験室について
               </Link>
-              <a href={COMPANY.url} className="hidden hover:text-foreground sm:inline">
+              <a href={COMPANY.url} target="_blank" rel="noopener noreferrer" className="hidden hover:text-foreground sm:inline">
                 misclib.com ↗
               </a>
             </nav>
