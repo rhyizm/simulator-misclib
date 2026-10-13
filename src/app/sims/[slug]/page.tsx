@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getSimEntry, simEntries } from "@/lib/sims";
 import { simModules } from "@/sims";
+import { CompanyNote } from "@/components/CompanyNote";
 
 /** 一覧にない slug はビルド時に 404 にする (全ページ静的生成) */
 export const dynamicParams = false;
@@ -35,21 +36,25 @@ export default async function SimPage(props: PageProps<"/sims/[slug]">) {
         <Link href="/" className="text-sm text-muted hover:text-foreground">
           ← 一覧へ
         </Link>
-        <div className="flex items-center gap-2 text-xs text-muted">
-          <span className="font-mono">#{String(entry.no).padStart(2, "0")}</span>
+        <div className="flex items-center gap-2 font-mono text-xs text-muted">
+          <span>#{String(entry.no).padStart(2, "0")}</span>
           <span>·</span>
           <time dateTime={entry.date}>{formatDate(entry.date)}</time>
           <span>·</span>
           <span>{entry.tags.join(" / ")}</span>
         </div>
         <h1 className="text-2xl font-bold leading-snug sm:text-3xl">{entry.title}</h1>
-        <p className="text-muted">{entry.question}</p>
+        <p className="text-soft">{entry.question}</p>
       </header>
 
       <Sim />
 
       <div className="prose max-w-3xl">
         <Article />
+      </div>
+
+      <div className="max-w-3xl">
+        <CompanyNote />
       </div>
     </article>
   );

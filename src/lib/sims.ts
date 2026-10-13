@@ -1,5 +1,3 @@
-export const SITE_NAME = "社会シミュレーション観察記";
-
 /**
  * 公開中のシミュレーション記事の一覧。
  * 描画コンポーネント本体は src/sims/index.ts で slug に対応づける。

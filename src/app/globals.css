@@ -1,55 +1,25 @@
 @import "tailwindcss";
 
+/*
+ * misclib.com と同じトーン: 黒地、白文字、淡い青のアクセント、
+ * ラベルは IBM Plex Mono、本文は Noto Sans JP。
+ */
 :root {
-  color-scheme: light;
-  --background: #fcfcfb;
-  --foreground: #0b0b0b;
-  --muted: #52514e;
-  --card: #ffffff;
-  --border: #e4e3df;
-  --accent: #2a78d6;
-  --accent-soft: #e3eefb;
-  /* データ可視化用 (検証済みパレット) */
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
-  --series-4: #eda100;
-  --series-7: #6250d6;
-  --series-8: #e34948;
-  --status-critical: #d03b3b;
-  --grid: #ecebe7;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --background: #121211;
-    --foreground: #f0efec;
-    --muted: #c3c2b7;
-    --card: #1a1a19;
-    --border: #2d2d2b;
-    --accent: #3987e5;
-    --accent-soft: #1b2c42;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-    --series-7: #9085e9;
-    --series-8: #e66767;
-    --status-critical: #e66767;
-    --grid: #262624;
-  }
-}
-
-:root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #121211;
-  --foreground: #f0efec;
-  --muted: #c3c2b7;
-  --card: #1a1a19;
-  --border: #2d2d2b;
-  --accent: #3987e5;
-  --accent-soft: #1b2c42;
+  --background: #0a0a0a;
+  --foreground: #f2f2f0;
+  --muted: #ffffff99;
+  --soft: #ffffffc7;
+  --card: #111111;
+  --border: #ffffff24;
+  --line: #ffffff14;
+  --accent: #8db8ff;
+  --accent-fg: #0a0a0a;
+  --accent-soft: #8db8ff1f;
+  --glow: #8db8ff38;
+  --coral: #f08a80;
+  --amber: #f3c46b;
+  /* データ可視化用 (ダーク面で検証済みのパレット) */
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
@@ -57,22 +27,27 @@
   --series-7: #9085e9;
   --series-8: #e66767;
   --status-critical: #e66767;
-  --grid: #262624;
+  --grid: #ffffff14;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-soft: var(--soft);
   --color-card: var(--card);
   --color-border: var(--border);
+  --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
   --color-accent-soft: var(--accent-soft);
+  --color-coral: var(--coral);
+  --color-amber: var(--amber);
   --color-series-1: var(--series-1);
   --color-series-2: var(--series-2);
   --color-series-8: var(--series-8);
   --font-sans: var(--font-noto-sans-jp), system-ui, -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
@@ -84,6 +59,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* 会社サイトと同じ、番号付きの小さなラベル */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 /* 記事本文のスタイル (tailwind typography プラグインを使わずに最小限) */
 .prose h2 {
   font-size: 1.35rem;
@@ -91,6 +80,8 @@ body {
   margin-top: 2.5rem;
   margin-bottom: 0.75rem;
   letter-spacing: 0.01em;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
 }
 .prose h3 {
   font-size: 1.1rem;
@@ -100,10 +91,15 @@ body {
 }
 .prose p {
   margin-bottom: 1rem;
+  color: var(--soft);
+}
+.prose strong {
+  color: var(--foreground);
 }
 .prose ul,
 .prose ol {
   margin: 0 0 1rem 1.4rem;
+  color: var(--soft);
 }
 .prose ul {
   list-style: disc;
@@ -122,7 +118,7 @@ body {
 }
 .prose th,
 .prose td {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   padding: 0.4rem 0.6rem;
   text-align: left;
   vertical-align: top;
@@ -131,6 +127,8 @@ body {
   color: var(--muted);
   font-weight: 600;
   white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
 }
 .prose a {
   color: var(--accent);

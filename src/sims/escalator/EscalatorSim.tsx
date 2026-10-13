@@ -267,7 +267,7 @@ export function EscalatorSim() {
               }
               setPlaying((p) => !p);
             }}
-            className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-white"
+            className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-fg hover:opacity-90"
           >
             {playing ? "一時停止" : finished ? "もう一度" : "再生"}
           </button>
