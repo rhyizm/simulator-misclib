@@ -42,9 +42,7 @@ function readTheme(el: HTMLElement): RenderTheme {
     grid: v("--grid"),
     stander: v("--series-1"),
     walker: v("--series-2"),
-    drunk: v("--series-7"),
-    fallen: v("--series-8"),
-    critical: v("--status-critical"),
+    blocker: v("--series-7"),
   };
 }
 
@@ -64,6 +62,7 @@ export function EscalatorSim() {
   const [region, setRegion] = useState<Region>("east");
   const [speed, setSpeed] = useState<Speed>(3);
   const [playing, setPlaying] = useState(false);
+  const [autoStarted, setAutoStarted] = useState(false);
   const [seedOffset, setSeedOffset] = useState(0);
   const [arrivalScale, setArrivalScale] = useState(1);
   const [walkerRatio, setWalkerRatio] = useState<number | null>(null);
@@ -150,6 +149,17 @@ export function EscalatorSim() {
     return () => cancelAnimationFrame(id);
   }, [reset, publish]);
 
+  // ページを開いたら自動で再生する (動きを減らす設定の人は除く)
+  useEffect(() => {
+    if (autoStarted) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const id = requestAnimationFrame(() => {
+      setAutoStarted(true);
+      if (!reduced) setPlaying(true);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [autoStarted]);
+
   // ダークモード切替に追従
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -229,10 +239,10 @@ export function EscalatorSim() {
               role="tab"
               aria-selected={sc.id === scenarioId}
               onClick={() => {
-                setPlaying(false);
                 setScenarioId(sc.id);
                 setArrivalScale(1);
                 setWalkerRatio(null);
+                setPlaying(true);
               }}
               className={`rounded-lg border px-3 py-1.5 text-sm ${
                 sc.id === scenarioId
@@ -264,20 +274,20 @@ export function EscalatorSim() {
           <button
             type="button"
             onClick={() => {
-              setPlaying(false);
               reset();
               setAgg(null);
               publish();
+              setPlaying(true);
             }}
             className="rounded-lg border border-border px-3 py-1.5 text-sm hover:border-accent"
           >
-            リセット
+            最初から
           </button>
           <button
             type="button"
             onClick={() => {
-              setPlaying(false);
               setSeedOffset((s) => s + 1);
+              setPlaying(true);
             }}
             className="rounded-lg border border-border px-3 py-1.5 text-sm hover:border-accent"
             title="乱数の種を変えて、別の 1 回を試す"
@@ -338,10 +348,7 @@ export function EscalatorSim() {
                 max={2}
                 step={0.1}
                 value={arrivalScale}
-                onChange={(e) => {
-                  setPlaying(false);
-                  setArrivalScale(Number(e.target.value));
-                }}
+                onChange={(e) => setArrivalScale(Number(e.target.value))}
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -354,10 +361,7 @@ export function EscalatorSim() {
                 max={1}
                 step={0.05}
                 value={params.walkerRatio}
-                onChange={(e) => {
-                  setPlaying(false);
-                  setWalkerRatio(Number(e.target.value));
-                }}
+                onChange={(e) => setWalkerRatio(Number(e.target.value))}
               />
             </label>
           </div>
@@ -368,10 +372,6 @@ export function EscalatorSim() {
       <div className="grid gap-4 md:grid-cols-2">
         {(["walkLane", "standBoth"] as const).map((policy) => {
           const st = stats?.[policy];
-          const injuries = st?.injuries ?? [];
-          const severe = injuries.filter((j) => j.severity === "severe").length;
-          const moderate = injuries.filter((j) => j.severity === "moderate").length;
-          const light = injuries.filter((j) => j.severity === "light").length;
           const color = policy === "walkLane" ? "var(--series-1)" : "var(--series-2)";
           return (
             <div key={policy} className="rounded-xl border border-border bg-card p-4">
@@ -395,12 +395,7 @@ export function EscalatorSim() {
                 <Stat label="最大の行列" value={st ? `${st.maxQueue} 人` : "–"} />
                 <Stat label="平均所要時間" value={st ? fmtSec(st.avgTrip) : "–"} hint="到着から降り口まで" />
                 <Stat label="歩きたい人の平均" value={st ? fmtSec(st.avgTripWalkers) : "–"} />
-                <Stat
-                  label="負傷者"
-                  value={st ? `${injuries.length} 人` : "–"}
-                  hint={injuries.length ? `重 ${severe} / 中 ${moderate} / 軽 ${light}` : undefined}
-                  critical={injuries.length > 0}
-                />
+                <Stat label="平均待ち時間" value={st ? fmtSec(st.avgWait) : "–"} hint="乗るまで" />
               </dl>
             </div>
           );
@@ -454,13 +449,6 @@ export function EscalatorSim() {
                   unit="秒"
                   better="low"
                 />
-                {params.incident && (
-                  <>
-                    <AggRow label="負傷者 (1 回あたり)" a={agg.walkLane.injured} b={agg.standBoth.injured} unit="人" better="low" />
-                    <AggRow label="うち重傷" a={agg.walkLane.severe} b={agg.standBoth.severe} unit="人" better="low" />
-                    <AggRow label="転げ落ちた距離の平均" a={agg.walkLane.avgTumble} b={agg.standBoth.avgTumble} unit="段" better="low" />
-                  </>
-                )}
               </tbody>
             </table>
           </div>
@@ -470,11 +458,11 @@ export function EscalatorSim() {
   );
 }
 
-function Stat({ label, value, hint, critical }: { label: string; value: string; hint?: string; critical?: boolean }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div>
       <dt className="text-xs text-muted">{label}</dt>
-      <dd className={`font-mono font-semibold ${critical ? "text-[var(--status-critical)]" : ""}`}>
+      <dd className="font-mono font-semibold">
         {value}
         {hint && <span className="ml-1 text-xs font-normal text-muted">{hint}</span>}
       </dd>
@@ -515,11 +503,10 @@ function AggRow({
 }
 
 function Legend() {
-  const items: { color: string; label: string; mark?: string }[] = [
+  const items: { color: string; label: string }[] = [
     { color: "var(--series-1)", label: "立つ人" },
     { color: "var(--series-2)", label: "歩く人 (∧ 印)" },
-    { color: "var(--series-7)", label: "酔っ払い" },
-    { color: "var(--series-8)", label: "転倒中 / 倒れている (× 印)" },
+    { color: "var(--series-7)", label: "歩く側に立つ人 (− 印)" },
   ];
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" aria-label="凡例">

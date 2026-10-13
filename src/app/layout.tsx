@@ -50,7 +50,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <p>
               ここで示す結果は単純化したモデルによる思考実験であり、現実の予測や政策の根拠ではありません。
             </p>
-            <p className="mt-1">Next.js + Cloudflare Workers で動いています。</p>
+            <p className="mt-1">
+              <a
+                href="https://www.misclib.com"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                www.misclib.com
+              </a>
+            </p>
           </div>
         </footer>
       </body>

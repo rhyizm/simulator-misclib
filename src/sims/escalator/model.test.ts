@@ -26,13 +26,21 @@ test("閑散時は片側空けのほうが歩きたい人は早く着く", () =>
   assert.ok(walk.maxQueue < 5 && both.maxQueue < 5);
 });
 
-test("転倒シナリオでは負傷者が出て、非常停止後に再開する", () => {
-  const p = getScenario("drunk").params;
-  for (const policy of ["walkLane", "standBoth"] as const) {
-    const s = runToEnd(createSim(p, policy));
-    const st = getStats(s);
-    assert.ok(st.injuries.length >= 1, policy);
-    assert.equal(st.stopped, false);
-    assert.ok(st.exited > 0);
-  }
+test("電車の波は両側立ちのほうが早くさばける", () => {
+  const p = getScenario("train").params;
+  const walk = aggregate(p, "walkLane", 10);
+  const both = aggregate(p, "standBoth", 10);
+  assert.ok(both.maxQueue < walk.maxQueue, `${both.maxQueue} < ${walk.maxQueue}`);
+  assert.ok(both.avgWait < walk.avgWait);
+});
+
+test("歩く側に立つ人がいると、歩きたい人の所要時間が伸びる", () => {
+  const p = getScenario("blocker").params;
+  const withBlockers = aggregate(p, "walkLane", 10);
+  const without = aggregate({ ...p, standOnWalkLaneRatio: 0 }, "walkLane", 10);
+  assert.ok(withBlockers.avgTripWalkers > without.avgTripWalkers);
+  // 両側立ちの世界ではこの設定は意味を持たない
+  const bothA = aggregate(p, "standBoth", 3);
+  const bothB = aggregate({ ...p, standOnWalkLaneRatio: 0 }, "standBoth", 3);
+  assert.deepEqual(bothA, bothB);
 });

@@ -7,7 +7,7 @@
 
 export type Policy = "walkLane" | "standBoth";
 export type Pref = "stand" | "walk";
-export type PersonState = "queue" | "riding" | "tumbling" | "fallen" | "done";
+export type PersonState = "queue" | "riding" | "done";
 
 /** 0 = 立つ側のレーン, 1 = 歩く側のレーン (standBoth では両方とも立つ側) */
 export type Lane = 0 | 1;
@@ -17,7 +17,8 @@ export interface Person {
   pref: Pref;
   /** 本当は立ちたいが行列が長いので歩く側に回った人 */
   reluctant: boolean;
-  isDrunk: boolean;
+  /** 歩く側のレーンに立ち止まってしまう人 (walkLane のみ) */
+  blocker: boolean;
   lane: Lane;
   /** 乗り口からの位置 (段)。0 = 乗り口, lengthSteps = 降り口 */
   pos: number;
@@ -29,11 +30,6 @@ export interface Person {
   tArrive: number;
   tBoard: number;
   tExit: number;
-  /** 転倒時の初期位置と転げ落ちた距離 (段) */
-  tumbleFrom: number;
-  tumbleDist: number;
-  /** 転落中の速度 (ベルトに対して下向き, 段/秒) */
-  tumbleSpeed: number;
 }
 
 export interface ArrivalPhase {
@@ -41,21 +37,6 @@ export interface ArrivalPhase {
   from: number;
   /** 1 分あたりの到着人数 */
   perMin: number;
-}
-
-export interface IncidentParams {
-  /** 酔っ払いが列の先頭に現れる時刻 (秒) */
-  atSec: number;
-  /** この段に達したところで転倒する */
-  atStep: number;
-  /** 転げ落ちる速度 (ベルトに対して, 段/秒) */
-  tumbleSpeed: number;
-  /** ぶつかった人が巻き込まれて転ぶ確率 */
-  knockProbWalker: number;
-  knockProbStander: number;
-  /** 非常停止ボタンが押されるまでの時間と、停止している時間 (秒) */
-  stopDelay: number;
-  stopDuration: number;
 }
 
 export interface SimParams {
@@ -76,19 +57,10 @@ export interface SimParams {
   /** 立つ側の行列がこの人数を超えると、立ちたい人の一部が歩く側へ回る */
   switchQueueThreshold: number;
   switchProb: number;
-  incident?: IncidentParams;
+  /** 立ちたい人のうち、歩く側のレーンに立ってしまう人の割合 (walkLane のみ) */
+  standOnWalkLaneRatio: number;
   durationSec: number;
   seed: number;
-}
-
-export interface Injury {
-  personId: number;
-  pref: Pref;
-  isDrunk: boolean;
-  /** 転げ落ちた距離 (段) */
-  tumbleDist: number;
-  severity: "light" | "moderate" | "severe";
-  tSec: number;
 }
 
 export interface SeriesPoint {
@@ -106,13 +78,6 @@ export interface SimState {
   queues: [number[], number[]];
   /** レーン上の人 (person id)。pos の降順には並んでいない */
   riders: [number[], number[]];
-  belt: number;
-  /** 非常停止中なら再開時刻、そうでなければ null */
-  stoppedUntil: number | null;
-  incidentFired: boolean;
-  drunkId: number | null;
-  fallAt: number | null;
-  injuries: Injury[];
   exited: number;
   exitedWalkers: number;
   sumTrip: number;
@@ -126,8 +91,6 @@ export interface SimState {
   rng: () => number;
   /** 両側立ちのとき次に乗るレーン (左右交互) */
   nextBoardLane: Lane;
-  /** 転倒後の非常停止を一度やり終えたか */
-  stopDone: boolean;
 }
 
 export interface SimStats {
@@ -138,8 +101,6 @@ export interface SimStats {
   avgTrip: number;
   avgTripWalkers: number;
   avgWait: number;
-  injuries: Injury[];
-  stopped: boolean;
 }
 
 /** 乱数 (mulberry32): seed が同じなら同じ結果になる */
@@ -164,12 +125,6 @@ export function arrivalRatePerSec(phases: ArrivalPhase[], t: number): number {
   return rate;
 }
 
-export function severityOf(dist: number): Injury["severity"] {
-  if (dist < 3) return "light";
-  if (dist < 8) return "moderate";
-  return "severe";
-}
-
 export function createSim(params: SimParams, policy: Policy): SimState {
   return {
     policy,
@@ -178,12 +133,6 @@ export function createSim(params: SimParams, policy: Policy): SimState {
     people: [],
     queues: [[], []],
     riders: [[], []],
-    belt: params.beltSpeed,
-    stoppedUntil: null,
-    incidentFired: false,
-    drunkId: null,
-    fallAt: null,
-    injuries: [],
     exited: 0,
     exitedWalkers: 0,
     sumTrip: 0,
@@ -195,18 +144,17 @@ export function createSim(params: SimParams, policy: Policy): SimState {
     nextId: 1,
     rng: mulberry32(params.seed),
     nextBoardLane: 0,
-    stopDone: false,
   };
 }
 
-function newPerson(s: SimState, pref: Pref, isDrunk: boolean): Person {
+function newPerson(s: SimState, pref: Pref): Person {
   const p = s.params;
   const gap = p.standGapMin + s.rng() * (p.standGapMax - p.standGapMin);
   const person: Person = {
     id: s.nextId++,
     pref,
     reluctant: false,
-    isDrunk,
+    blocker: false,
     lane: 0,
     pos: 0,
     state: "queue",
@@ -215,22 +163,23 @@ function newPerson(s: SimState, pref: Pref, isDrunk: boolean): Person {
     tArrive: s.t,
     tBoard: -1,
     tExit: -1,
-    tumbleFrom: 0,
-    tumbleDist: 0,
-    tumbleSpeed: 0,
   };
   s.people.push(person);
   return person;
 }
 
 /** 到着した人を行列に並べる */
-function enqueue(s: SimState, person: Person, front = false) {
+function enqueue(s: SimState, person: Person) {
   const p = s.params;
   let lane: Lane = 0;
   if (s.policy === "walkLane") {
     if (person.pref === "walk") {
       lane = 1;
       person.relSpeed = p.walkSpeed;
+    } else if (s.rng() < p.standOnWalkLaneRatio) {
+      // 歩く側だと知らずに (あるいは気にせず) 立ってしまう
+      lane = 1;
+      person.blocker = true;
     } else if (
       s.queues[0].length > p.switchQueueThreshold &&
       s.rng() < p.switchProb
@@ -242,8 +191,7 @@ function enqueue(s: SimState, person: Person, front = false) {
     }
   }
   person.lane = lane;
-  if (front) s.queues[lane].unshift(person.id);
-  else s.queues[lane].push(person.id);
+  s.queues[lane].push(person.id);
 }
 
 function queueLength(s: SimState): number {
@@ -269,16 +217,19 @@ function board(s: SimState, lane: Lane, id: number) {
   s.riders[lane].push(id);
 }
 
+/** レーン上でこの人が前の人との間に要求する距離 */
+function requiredGap(s: SimState, lane: Lane, person: Person): number {
+  if (s.policy === "walkLane" && lane === 1 && person.relSpeed > 0) return s.params.walkGap;
+  return person.gap;
+}
+
 function tryBoard(s: SimState) {
-  const p = s.params;
-  if (s.stoppedUntil !== null) return;
   if (s.policy === "walkLane") {
     for (const lane of [0, 1] as const) {
       const q = s.queues[lane];
       if (q.length === 0) continue;
       const person = s.people[q[0] - 1];
-      const need = lane === 1 ? p.walkGap : person.gap;
-      if (lowestPos(s, lane) >= need) {
+      if (lowestPos(s, lane) >= requiredGap(s, lane, person)) {
         q.shift();
         board(s, lane, person.id);
       }
@@ -300,36 +251,27 @@ function tryBoard(s: SimState) {
 
 function moveRiders(s: SimState, dt: number) {
   const p = s.params;
-  const belt = s.belt;
+  const belt = p.beltSpeed;
   for (const lane of [0, 1] as const) {
     const ids = s.riders[lane];
     if (ids.length === 0) continue;
     // 前にいる人から順に動かす
     ids.sort((a, b) => s.people[b - 1].pos - s.people[a - 1].pos);
     let leaderPos = Infinity;
-    let leaderGap = 0;
     for (const id of ids) {
       const r = s.people[id - 1];
-      if (r.state === "riding") {
-        const v = belt + (belt > 0 ? r.relSpeed : 0);
-        let next = r.pos + v * dt;
-        const limit = leaderPos - leaderGap;
-        if (next > limit) next = Math.max(r.pos, limit);
-        r.pos = next;
-      } else if (r.state === "fallen") {
-        // 倒れたまま、ベルトと一緒に運ばれる
-        r.pos += belt * dt;
-      }
-      if (r.state !== "tumbling") {
-        leaderPos = r.pos;
-        leaderGap = lane === 1 && s.policy === "walkLane" ? p.walkGap : r.gap;
-        if (r.state === "fallen") leaderGap = Math.max(leaderGap, 1);
-      }
+      const v = belt + r.relSpeed;
+      let next = r.pos + v * dt;
+      // 前の人に追いついたら、その人の速さに合わせる (追い越せない)
+      const limit = leaderPos - requiredGap(s, lane, r);
+      if (next > limit) next = Math.max(r.pos, limit);
+      r.pos = next;
+      leaderPos = r.pos;
     }
     // 降り口に着いた人
     for (let i = ids.length - 1; i >= 0; i--) {
       const r = s.people[ids[i] - 1];
-      if (r.pos >= p.lengthSteps && r.state === "riding") {
+      if (r.pos >= p.lengthSteps) {
         r.state = "done";
         r.tExit = s.t;
         const trip = s.t - r.tArrive;
@@ -340,120 +282,10 @@ function moveRiders(s: SimState, dt: number) {
           s.sumTripWalkers += trip;
         }
         ids.splice(i, 1);
-      } else if (r.pos >= p.lengthSteps && r.state === "fallen") {
-        // 倒れたまま上に運ばれたら、降り口で助け出される
-        r.state = "done";
-        r.tExit = s.t;
-        ids.splice(i, 1);
       }
     }
   }
 }
-
-function recordInjury(s: SimState, r: Person) {
-  s.injuries.push({
-    personId: r.id,
-    pref: r.pref,
-    isDrunk: r.isDrunk,
-    tumbleDist: r.tumbleDist,
-    severity: severityOf(r.tumbleDist),
-    tSec: s.t,
-  });
-}
-
-function startTumble(s: SimState, r: Person, speed: number) {
-  r.state = "tumbling";
-  r.tumbleFrom = r.pos;
-  r.tumbleSpeed = speed;
-}
-
-function stopTumble(s: SimState, r: Person, at: number) {
-  r.pos = Math.max(0, at);
-  r.tumbleDist = Math.max(0, r.tumbleFrom - r.pos);
-  r.state = "fallen";
-  recordInjury(s, r);
-}
-
-function moveTumblers(s: SimState, dt: number) {
-  const inc = s.params.incident;
-  if (!inc) return;
-  for (const lane of [0, 1] as const) {
-    const ids = s.riders[lane];
-    for (const id of ids) {
-      const r = s.people[id - 1];
-      if (r.state !== "tumbling") continue;
-      const next = r.pos + (s.belt - r.tumbleSpeed) * dt;
-      if (next <= 0) {
-        stopTumble(s, r, 0);
-        continue;
-      }
-      // 自分より下にいる、転落中でない人にぶつかるか
-      let victim: Person | null = null;
-      for (const oid of ids) {
-        if (oid === id) continue;
-        const o = s.people[oid - 1];
-        if (o.state === "tumbling") continue;
-        if (o.pos <= r.pos && o.pos >= next - 0.4) {
-          if (!victim || o.pos > victim.pos) victim = o;
-        }
-      }
-      if (victim) {
-        stopTumble(s, r, victim.pos + 0.4);
-        if (victim.state === "riding") {
-          const holdingRail = victim.relSpeed === 0;
-          const prob = holdingRail ? inc.knockProbStander : inc.knockProbWalker;
-          if (s.rng() < prob) {
-            startTumble(s, victim, r.tumbleSpeed * 0.8);
-          }
-        }
-      } else {
-        r.pos = next;
-      }
-    }
-  }
-}
-
-function handleIncident(s: SimState) {
-  const inc = s.params.incident;
-  if (!inc) return;
-  if (!s.incidentFired && s.t >= inc.atSec) {
-    s.incidentFired = true;
-    const drunk = newPerson(s, "walk", true);
-    // 歩く側に空きがあるなら歩く。両側立ちならもちろん立つ。
-    enqueue(s, drunk, true);
-    s.drunkId = drunk.id;
-  }
-  if (s.drunkId !== null && s.fallAt === null) {
-    const d = s.people[s.drunkId - 1];
-    if (d.state === "riding" && d.pos >= inc.atStep) {
-      s.fallAt = s.t;
-      startTumble(s, d, inc.tumbleSpeed);
-    }
-  }
-  if (s.fallAt !== null && s.stoppedUntil === null && s.t >= s.fallAt + inc.stopDelay && !s.stopDone) {
-    s.stoppedUntil = s.t + inc.stopDuration;
-    s.belt = 0;
-  }
-  if (s.stoppedUntil !== null && s.t >= s.stoppedUntil) {
-    // 再開: 倒れていた人は救護されて降りる
-    s.stoppedUntil = null;
-    s.belt = s.params.beltSpeed;
-    for (const lane of [0, 1] as const) {
-      const ids = s.riders[lane];
-      for (let i = ids.length - 1; i >= 0; i--) {
-        const r = s.people[ids[i] - 1];
-        if (r.state === "fallen" || r.state === "tumbling") {
-          if (r.state === "tumbling") stopTumble(s, r, r.pos);
-          r.state = "done";
-          r.tExit = s.t;
-          ids.splice(i, 1);
-        }
-      }
-    }
-    s.stopDone = true;
-  }
-}
-
 
 function arrive(s: SimState, dt: number) {
   const rate = arrivalRatePerSec(s.params.arrivals, s.t);
@@ -464,8 +296,7 @@ function arrive(s: SimState, dt: number) {
   if (expected > 1 && s.rng() < expected - 1) n++;
   for (let i = 0; i < n; i++) {
     const pref: Pref = s.rng() < s.params.walkerRatio ? "walk" : "stand";
-    const person = newPerson(s, pref, false);
-    enqueue(s, person);
+    enqueue(s, newPerson(s, pref));
   }
 }
 
@@ -473,11 +304,9 @@ function arrive(s: SimState, dt: number) {
 export function step(s: SimState, dt: number = DT) {
   if (s.t >= s.params.durationSec) return;
   arrive(s, dt);
-  handleIncident(s);
   tryBoard(s);
-  moveTumblers(s, dt);
   moveRiders(s, dt);
-  s.beltOffset += s.belt * dt;
+  s.beltOffset += s.params.beltSpeed * dt;
   s.t = Math.round((s.t + dt) * 1000) / 1000;
   const q = queueLength(s);
   if (q > s.maxQueue) s.maxQueue = q;
@@ -506,8 +335,6 @@ export function getStats(s: SimState): SimStats {
     avgTrip: s.exited > 0 ? s.sumTrip / s.exited : 0,
     avgTripWalkers: s.exitedWalkers > 0 ? s.sumTripWalkers / s.exitedWalkers : 0,
     avgWait: boarded > 0 ? s.sumWait / boarded : 0,
-    injuries: s.injuries,
-    stopped: s.stoppedUntil !== null,
   };
 }
 
@@ -519,10 +346,6 @@ export interface AggregateStats {
   avgTrip: number;
   avgTripWalkers: number;
   avgWait: number;
-  injured: number;
-  severe: number;
-  /** 転げ落ちた距離の平均 (段) */
-  avgTumble: number;
 }
 
 export function aggregate(params: SimParams, policy: Policy, runs: number): AggregateStats {
@@ -533,11 +356,7 @@ export function aggregate(params: SimParams, policy: Policy, runs: number): Aggr
     avgTrip: 0,
     avgTripWalkers: 0,
     avgWait: 0,
-    injured: 0,
-    severe: 0,
-    avgTumble: 0,
   };
-  let tumbleN = 0;
   for (let i = 0; i < runs; i++) {
     const s = runToEnd(createSim({ ...params, seed: params.seed + i * 7919 }, policy));
     const st = getStats(s);
@@ -546,20 +365,11 @@ export function aggregate(params: SimParams, policy: Policy, runs: number): Aggr
     acc.avgTrip += st.avgTrip;
     acc.avgTripWalkers += st.avgTripWalkers;
     acc.avgWait += st.avgWait;
-    acc.injured += st.injuries.length;
-    acc.severe += st.injuries.filter((j) => j.severity === "severe").length;
-    for (const j of st.injuries) {
-      acc.avgTumble += j.tumbleDist;
-      tumbleN++;
-    }
   }
   acc.exited /= runs;
   acc.maxQueue /= runs;
   acc.avgTrip /= runs;
   acc.avgTripWalkers /= runs;
   acc.avgWait /= runs;
-  acc.injured /= runs;
-  acc.severe /= runs;
-  acc.avgTumble = tumbleN > 0 ? acc.avgTumble / tumbleN : 0;
   return acc;
 }

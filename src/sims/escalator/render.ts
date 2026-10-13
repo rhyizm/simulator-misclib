@@ -8,9 +8,7 @@ export interface RenderTheme {
   grid: string;
   stander: string;
   walker: string;
-  drunk: string;
-  fallen: string;
-  critical: string;
+  blocker: string;
 }
 
 export const CANVAS_W = 320;
@@ -104,8 +102,7 @@ export function renderSim(
     const r = 6.5;
     let fill = theme.stander;
     if (p.relSpeed > 0) fill = theme.walker;
-    if (p.isDrunk) fill = theme.drunk;
-    if (p.state === "tumbling" || p.state === "fallen") fill = theme.fallen;
+    if (p.blocker) fill = theme.blocker;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fillStyle = fill;
@@ -113,26 +110,7 @@ export function renderSim(
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = theme.bg;
     ctx.stroke();
-    if (p.state === "fallen") {
-      // 倒れている: ×
-      ctx.strokeStyle = theme.bg;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x - 3, y - 3);
-      ctx.lineTo(x + 3, y + 3);
-      ctx.moveTo(x + 3, y - 3);
-      ctx.lineTo(x - 3, y + 3);
-      ctx.stroke();
-    } else if (p.state === "tumbling") {
-      ctx.strokeStyle = theme.bg;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, y - 3);
-      ctx.lineTo(x, y + 3);
-      ctx.moveTo(x - 3, y);
-      ctx.lineTo(x + 3, y + 3);
-      ctx.stroke();
-    } else if (p.relSpeed > 0) {
+    if (p.relSpeed > 0) {
       // 歩く人: 上向きの山形
       ctx.strokeStyle = theme.bg;
       ctx.lineWidth = 1.5;
@@ -140,6 +118,14 @@ export function renderSim(
       ctx.moveTo(x - 3, y + 1.5);
       ctx.lineTo(x, y - 2);
       ctx.lineTo(x + 3, y + 1.5);
+      ctx.stroke();
+    } else if (p.blocker) {
+      // 歩く側に立つ人: 横棒
+      ctx.strokeStyle = theme.bg;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 3, y);
+      ctx.lineTo(x + 3, y);
       ctx.stroke();
     }
   };
@@ -150,29 +136,6 @@ export function renderSim(
       const y = STRIP_BOTTOM - p.pos * stepPx - stepPx / 2;
       drawPerson(p, laneX(lane), y);
     }
-  }
-
-  // 非常停止
-  if (s.stoppedUntil !== null) {
-    ctx.fillStyle = theme.critical;
-    ctx.globalAlpha = 0.12;
-    ctx.fillRect(stripX, STRIP_TOP, LANE_W * 2, stripH);
-    ctx.globalAlpha = 1;
-    const remain = Math.max(0, Math.ceil(s.stoppedUntil - s.t));
-    const label = `⚠ 非常停止中 残り ${remain} 秒`;
-    ctx.font = "700 12px sans-serif";
-    ctx.textAlign = "center";
-    const tw = ctx.measureText(label).width;
-    const by = STRIP_TOP + stripH / 2;
-    ctx.fillStyle = theme.bg;
-    ctx.globalAlpha = 0.92;
-    ctx.fillRect(W / 2 - tw / 2 - 8, by - 12, tw + 16, 20);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = theme.critical;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(W / 2 - tw / 2 - 8, by - 12, tw + 16, 20);
-    ctx.fillStyle = theme.critical;
-    ctx.fillText(label, W / 2, by + 3);
   }
 
   // 待ち行列
@@ -195,7 +158,7 @@ export function renderSim(
         const y = QUEUE_TOP + row * gapPx;
         ctx.beginPath();
         ctx.arc(x, y, dot / 2, 0, Math.PI * 2);
-        ctx.fillStyle = p.isDrunk ? theme.drunk : p.lane === 1 ? theme.walker : theme.stander;
+        ctx.fillStyle = p.blocker ? theme.blocker : p.lane === 1 ? theme.walker : theme.stander;
         ctx.fill();
       }
       ctx.fillStyle = theme.muted;
@@ -215,7 +178,7 @@ export function renderSim(
       const y = QUEUE_TOP + row * gapPx;
       ctx.beginPath();
       ctx.arc(x, y, dot / 2, 0, Math.PI * 2);
-      ctx.fillStyle = p.isDrunk ? theme.drunk : p.pref === "walk" ? theme.walker : theme.stander;
+      ctx.fillStyle = p.pref === "walk" ? theme.walker : theme.stander;
       ctx.fill();
     }
     ctx.fillStyle = theme.muted;
