@@ -1,10 +1,36 @@
 import Link from "next/link";
 import { formatDate, simEntries } from "@/lib/sims";
-import { COMPANY } from "@/lib/site";
+import { COMPANY, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
+import { JsonLd } from "@/components/JsonLd";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.misclib.com/#organization",
+      name: COMPANY.name,
+      alternateName: COMPANY.nameJa,
+      url: "https://www.misclib.com/",
+      logo: `${SITE_URL}/misclib-icon.svg`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: `${SITE_URL}/`,
+      name: SITE_NAME,
+      alternateName: SITE_TAGLINE,
+      description: SITE_DESCRIPTION,
+      inLanguage: "ja",
+      publisher: { "@id": "https://www.misclib.com/#organization" },
+    },
+  ],
+};
 
 export default function Home() {
   return (
     <div className="space-y-14">
+      <JsonLd data={jsonLd} />
       <section className="space-y-4 pt-4">
         <p className="label">A side project by {COMPANY.name}</p>
         <h1 className="text-3xl font-bold leading-snug sm:text-5xl">

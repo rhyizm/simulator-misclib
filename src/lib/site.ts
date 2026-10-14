@@ -1,4 +1,5 @@
 /** サイト名とブランド情報。表示文言はここに集約する */
+export const SITE_URL = "https://simu.misclib.com";
 export const SITE_NAME = "Misclib Lab";
 export const SITE_TAGLINE = "社会シミュレーション観察記";
 export const SITE_DESCRIPTION =

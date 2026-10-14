@@ -25,6 +25,7 @@ npm run dev        # http://localhost:3000
 npm test           # シミュレーションモデルのテスト
 npm run lint
 npm run typecheck
+npm run og        # OG 画像 (public/og/*.png) を再生成。記事を追加したら実行する
 ```
 
 ## Cloudflare へのデプロイ
@@ -57,6 +58,7 @@ npm run deploy     # ビルドして Cloudflare Workers へデプロイ
 1. `src/sims/<slug>/` にモデル (`model.ts`)、シナリオ、描画コンポーネント、記事本文 (`article.tsx`) を置く
 2. `src/lib/sims.ts` の一覧にタイトル・要約・日付を追加する
 3. `src/sims/index.ts` で slug とコンポーネントを対応づける
+4. `npm run og` で OG 画像を生成してコミットする (sitemap と構造化データは一覧から自動生成)
 
 モデルは React や DOM に依存しない純粋関数として書くと、`node --test` で検証でき、100 回試行などの集計にもそのまま使えます。
 
