@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
 import { EscalatorSim } from "./escalator/EscalatorSim";
 import { EscalatorArticle } from "./escalator/article";
+import { QuakeAlertSim } from "./quake-alert/QuakeAlertSim";
+import { QuakeAlertArticle } from "./quake-alert/article";
 
 export interface SimModule {
   /** インタラクティブなシミュレーション本体 (client component) */
@@ -11,4 +13,5 @@ export interface SimModule {
 
 export const simModules: Record<string, SimModule> = {
   escalator: { Sim: EscalatorSim, Article: EscalatorArticle },
+  "quake-alert": { Sim: QuakeAlertSim, Article: QuakeAlertArticle },
 };
