@@ -14,16 +14,6 @@ export interface SimEntry {
 
 export const simEntries: SimEntry[] = [
   {
-    slug: "truck-berth",
-    no: 2,
-    title: "トラックの荷待ち、予約制にすれば消えるのか",
-    question: "物流センターの荷降ろしを先着順からバース予約制に変えると、ドライバーの待ち時間はどこへ行くのか。",
-    summary:
-      "いつもの平日、渋滞で遅れる日、予約しないトラックが多い日、荷物が多すぎる日。4 つの場面で「先着順」と「バース予約制」を並べて動かし、荷待ち時間と 2 時間ルールの達成度を比べます。",
-    date: "2026-10-17",
-    tags: ["物流", "労働", "2024年問題"],
-  },
-  {
     slug: "escalator",
     no: 1,
     title: "エスカレーター、片側を空けるべきか、両側に立つべきか",
@@ -34,8 +24,18 @@ export const simEntries: SimEntry[] = [
     tags: ["交通", "都市", "安全"],
   },
   {
-    slug: "quake-alert",
+    slug: "truck-berth",
     no: 2,
+    title: "トラックの荷待ち、予約制にすれば消えるのか",
+    question: "物流センターの荷降ろしを先着順からバース予約制に変えると、ドライバーの待ち時間はどこへ行くのか。",
+    summary:
+      "いつもの平日、渋滞で遅れる日、予約しないトラックが多い日、荷物が多すぎる日。4 つの場面で「先着順」と「バース予約制」を並べて動かし、荷待ち時間と 2 時間ルールの達成度を比べます。",
+    date: "2026-10-17",
+    tags: ["物流", "労働", "2024年問題"],
+  },
+  {
+    slug: "quake-alert",
+    no: 3,
     title: "地震の警報、どこで鳴らせばいちばん多くの人を守れるか",
     question: "空振りを恐れれば見逃しが増え、見逃しを恐れれば空振りで信頼が削られる。その釣り合いはどこにあるのか。",
     summary:
@@ -45,7 +45,7 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "toilet",
-    no: 2,
+    no: 4,
     title: "女性トイレの行列は、便器を何個ずつに分ければ消えるのか",
     question: "同じ広さのまま男女の便器の数を分け直すと、待ち時間はどこで釣り合うのか。",
     summary:
@@ -55,7 +55,7 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "speed30",
-    no: 2,
+    no: 5,
     title: "生活道路の 30 km/h、何秒遅れて何人助かるのか",
     question: "中央線のない道の法定速度が 60 km/h から 30 km/h に下がった。その遅れと安全は釣り合っているのか。",
     summary:

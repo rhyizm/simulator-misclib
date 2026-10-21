@@ -64,7 +64,7 @@ export default function Home() {
           <h2 className="text-lg font-bold">シミュレーション一覧</h2>
         </div>
         <ul className="grid gap-4 sm:grid-cols-2">
-          {simEntries.map((e) => (
+          {[...simEntries].sort((a, b) => b.no - a.no).map((e) => (
             <li key={e.slug}>
               <Link
                 href={`/sims/${e.slug}`}
