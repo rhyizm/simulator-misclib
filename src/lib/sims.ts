@@ -43,6 +43,16 @@ export const simEntries: SimEntry[] = [
     date: "2026-10-18",
     tags: ["防災", "情報", "信頼"],
   },
+  {
+    slug: "toilet",
+    no: 2,
+    title: "女性トイレの行列は、便器を何個ずつに分ければ消えるのか",
+    question: "同じ広さのまま男女の便器の数を分け直すと、待ち時間はどこで釣り合うのか。",
+    summary:
+      "国交省の新しい指針は「待ち時間を男女平等に」。駅の夕方、劇場の休憩、連休の SA、客層が入れ替わるアリーナ。16 個の便器の分け方を変えた 2 つの世界を並べ、男女の行列と待ち時間を比べます。",
+    date: "2026-10-19",
+    tags: ["ジェンダー", "都市", "施設"],
+  },
 ];
 
 export function getSimEntry(slug: string): SimEntry | undefined {
