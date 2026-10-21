@@ -53,6 +53,16 @@ export const simEntries: SimEntry[] = [
     date: "2026-10-19",
     tags: ["ジェンダー", "都市", "施設"],
   },
+  {
+    slug: "speed30",
+    no: 2,
+    title: "生活道路の 30 km/h、何秒遅れて何人助かるのか",
+    question: "中央線のない道の法定速度が 60 km/h から 30 km/h に下がった。その遅れと安全は釣り合っているのか。",
+    summary:
+      "住宅街の抜け道、通学路の朝、郊外の広い農道。同じ車と同じ飛び出しを「上限 60」と「上限 30」の 2 つの世界で走らせ、所要時間の遅れとぶつかったときの速さ、亡くなる人の期待値を比べます。",
+    date: "2026-10-20",
+    tags: ["交通", "安全", "法改正"],
+  },
 ];
 
 export function getSimEntry(slug: string): SimEntry | undefined {
