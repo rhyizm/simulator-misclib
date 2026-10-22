@@ -63,6 +63,16 @@ export const simEntries: SimEntry[] = [
     date: "2026-10-20",
     tags: ["交通", "安全", "法改正"],
   },
+  {
+    slug: "kasuhara-call",
+    no: 6,
+    title: "カスハラの電話、30 分で切ると誰が助かるのか",
+    question: "10 月からカスハラ対策が企業の義務になった。1 日に数本の長電話を打ち切るルールは、何を守っているのか。",
+    summary:
+      "いつもの平日、カスハラがまれな窓口、切っても掛け直してくる相手、職員 3 人の役所の窓口。同じ電話を「納得するまで切らない」と「30 分で切る」の 2 つの窓口で受け、待ちきれずに切る客とオペレーターの消耗を比べます。",
+    date: "2026-10-22",
+    tags: ["労働", "接客", "法改正"],
+  },
 ];
 
 export function getSimEntry(slug: string): SimEntry | undefined {
