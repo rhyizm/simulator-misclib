@@ -63,6 +63,16 @@ export const simEntries: SimEntry[] = [
     date: "2026-10-20",
     tags: ["交通", "安全", "法改正"],
   },
+  {
+    slug: "php-patch",
+    no: 6,
+    title: "PHP の穴、修正版を当てるまでサイトを止めるべきか",
+    question: "首相は「すぐ直せないなら一時停止も有効」と呼びかけた。止めればどれだけ防げて、どれだけの時間が止まるのか。",
+    summary:
+      "10 月 21 日の PHP の重大な脆弱性「PHP2Shell」が題材。400 のサイトの 1 週間を「修正版を待つ」「気づいたら止める」「WAF で守る」の 3 つの世界で流し、乗っ取られたサイトと止めた時間を比べます。",
+    date: "2026-10-23",
+    tags: ["セキュリティ", "IT", "インフラ"],
+  },
 ];
 
 export function getSimEntry(slug: string): SimEntry | undefined {
