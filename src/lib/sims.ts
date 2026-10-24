@@ -63,6 +63,16 @@ export const simEntries: SimEntry[] = [
     date: "2026-10-20",
     tags: ["交通", "安全", "法改正"],
   },
+  {
+    slug: "seat-cut",
+    no: 6,
+    title: "衆院の比例を 31 減らすと、どの党の議席が消えるのか",
+    question: "同じ票のまま比例代表の定数だけを減らすと、議席の減り方は党によってどう違い、議会の姿はどう変わるのか。",
+    summary:
+      "自民の折衷案「比例 31 減」と与党法案の「45 減」。同じ 1 回の選挙の票を、比例定数だけが違う 3 つの世界に流し、ドント方式で消える席、小さな党の議席、単独過半数の出やすさを比べます。",
+    date: "2026-10-24",
+    tags: ["政治", "選挙制度", "国会"],
+  },
 ];
 
 export function getSimEntry(slug: string): SimEntry | undefined {
