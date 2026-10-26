@@ -9,6 +9,8 @@ import { ToiletSim } from "./toilet/ToiletSim";
 import { ToiletArticle } from "./toilet/article";
 import { Speed30Sim } from "./speed30/Speed30Sim";
 import { Speed30Article } from "./speed30/article";
+import { HomeShelterSim } from "./home-shelter/HomeShelterSim";
+import { HomeShelterArticle } from "./home-shelter/article";
 
 export interface SimModule {
   /** インタラクティブなシミュレーション本体 (client component) */
@@ -23,4 +25,5 @@ export const simModules: Record<string, SimModule> = {
   "quake-alert": { Sim: QuakeAlertSim, Article: QuakeAlertArticle },
   toilet: { Sim: ToiletSim, Article: ToiletArticle },
   speed30: { Sim: Speed30Sim, Article: Speed30Article },
+  "home-shelter": { Sim: HomeShelterSim, Article: HomeShelterArticle },
 };

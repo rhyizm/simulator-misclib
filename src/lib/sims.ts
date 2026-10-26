@@ -63,6 +63,16 @@ export const simEntries: SimEntry[] = [
     date: "2026-10-20",
     tags: ["交通", "安全", "法改正"],
   },
+  {
+    slug: "home-shelter",
+    no: 6,
+    title: "在宅避難、何を何日分備えれば避難所はあふれないのか",
+    question: "7 割が「家に残りたい」と答える在宅避難。水と食料を増やすだけで、本当に家に残れるのか。",
+    summary:
+      "都市の住宅街、長い断水が続く半島、停電したマンション街。同じ地震・同じ断水を「いまの備え」「水と食料を 7 日分」「トイレも 7 日分」の 3 つの町で流し、家を出た人とその理由、避難所に入れない人の数を比べます。",
+    date: "2026-10-26",
+    tags: ["防災", "備蓄", "避難所"],
+  },
 ];
 
 export function getSimEntry(slug: string): SimEntry | undefined {
