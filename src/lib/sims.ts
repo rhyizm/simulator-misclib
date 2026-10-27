@@ -63,6 +63,16 @@ export const simEntries: SimEntry[] = [
     date: "2026-10-20",
     tags: ["交通", "安全", "法改正"],
   },
+  {
+    slug: "rumor-fix",
+    no: 6,
+    title: "デマの訂正、何時間遅れると追いつけないのか",
+    question: "訂正を出すのが 30 分か、3 時間か、翌朝か。その違いで、デマを信じる人の数はどれだけ変わるのか。",
+    summary:
+      "地震のあとのうわさ、選挙の偽情報、分断されたタイムライン、手口を知る人が 2 割いる町。400 人の SNS に同じデマを流し、訂正の時刻だけが違う 3 つの世界で、信じる人の山と最後まで残る人を比べます。",
+    date: "2026-10-27",
+    tags: ["情報", "SNS", "防災"],
+  },
 ];
 
 export function getSimEntry(slug: string): SimEntry | undefined {
