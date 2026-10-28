@@ -25,5 +25,16 @@
   ],
   "observability": {
     "enabled": true
+  },
+  // PR ごとのプレビュー (Workers Builds の `npx wrangler preview`) の設定。
+  // プレビューは本番の設定を引き継がないので、このブロックがないと失敗する。
+  // service binding は自動で引き継がれないため明示する (プレビューからは本番の Worker を呼ぶ)。
+  "previews": {
+    "services": [
+      {
+        "binding": "WORKER_SELF_REFERENCE",
+        "service": "simulator-misclib"
+      }
+    ]
   }
 }

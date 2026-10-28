@@ -64,6 +64,8 @@ npm run deploy     # ビルドして Cloudflare Workers へデプロイ
   `CLOUDFLARE_ACCOUNT_ID` が必要です。
 - 設定は `wrangler.jsonc` と `open-next.config.ts` にあります。
   全ページがビルド時に静的生成されるので、キャッシュは R2 / KV を使わず Workers Static Assets を利用しています。
+- PR などの本番以外のブランチは、Workers Builds が `npx wrangler preview` で Preview を作ります。
+  Preview は本番の設定を引き継がないので、`wrangler.jsonc` の `previews` ブロック (service binding を含む) を消さないでください。
 - Cloudflare ダッシュボードから Git 連携でデプロイする場合は、ビルドコマンドに `npx opennextjs-cloudflare build`、
   デプロイコマンドに `npx opennextjs-cloudflare deploy` を指定してください。
 - ローカルで `next dev` を使うときは `.dev.vars` に `NEXTJS_ENV=development` を置きます (gitignore 済み、`.dev.vars.example` をコピー)。
