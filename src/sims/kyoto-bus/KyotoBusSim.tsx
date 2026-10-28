@@ -3,24 +3,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DT,
-  averageStats,
+  aggregate,
   createSim,
+  effectiveRates,
+  expressPerHour,
   getStats,
   isFinished,
-  runTrial,
+  regularPerHour,
   step,
+  type AggregateStats,
+  type KindStats,
   type Policy,
-  type PolicyId,
   type SimParams,
   type SimState,
   type SimStats,
 } from "./model";
-import { POLICIES, POLICY_ORDER, getScenario, scenarios } from "./scenarios";
+import { POLICIES, POLICY_IDS, getScenario, scenarios, type PolicyId } from "./scenarios";
 import { CANVAS_H, CANVAS_W, renderSim, type RenderTheme } from "./render";
-import { TimeChart, type ChartSeries, type Metric } from "./TimeChart";
+import { TimeChart, type ChartSeries } from "./TimeChart";
 
 type World = "a" | "b";
-type Speed = 120 | 360 | 900;
+type Speed = 30 | 90 | 240;
 
 const WORLD_COLOR: Record<World, string> = { a: "var(--series-1)", b: "var(--series-2)" };
 
@@ -33,77 +36,59 @@ function readTheme(el: HTMLElement): RenderTheme {
     muted: v("--muted"),
     border: v("--border"),
     grid: v("--grid"),
-    litter: v("--coral"),
-    holding: v("--amber"),
-    bin: v("--series-3"),
-    patrol: v("--accent"),
+    resident: v("--series-3"),
+    tourist: v("--series-4"),
+    express: v("--series-8"),
   };
 }
 
-function fmtHour(startHour: number, t: number): string {
-  const total = startHour * 60 + Math.floor(t / 60);
-  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+function fmtWait(s: number): string {
+  if (!Number.isFinite(s)) return "–";
+  if (s < 60) return `${s.toFixed(0)} 秒`;
+  return `${Math.floor(s / 60)} 分 ${String(Math.round(s % 60)).padStart(2, "0")} 秒`;
 }
 
-function fmtInt(v: number): string {
-  return Math.round(v).toLocaleString();
+function fmtMin(s: number): string {
+  return `${(s / 60).toFixed(1)} 分`;
+}
+
+function fmtClock(t: number): string {
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  return `${h}:${String(m).padStart(2, "0")}`;
 }
 
 function fmtPct(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
+  return `${(v * 100).toFixed(0)}%`;
 }
 
-interface Tuning {
-  patrollers: number;
-  emptyEveryHours: number;
-}
-
-/** 詳細設定の見回りの人数・回収間隔を反映した対策 */
-function buildPolicy(id: PolicyId, tuning: Tuning): Policy {
-  const p = POLICIES[id];
-  if (id === "patrol") {
-    return { ...p, patrollers: tuning.patrollers, name: `見回り ${tuning.patrollers} 人 + 過料` };
-  }
-  if (id === "bins") {
-    const h = tuning.emptyEveryHours;
-    return { ...p, emptyEverySec: h * 3600, name: `ごみ箱 ${p.bins} つ (${h} 時間おきに回収)` };
-  }
-  return p;
+function fmtYen(v: number): string {
+  return `${(v / 10000).toFixed(1)} 万円`;
 }
 
 function describePolicy(p: Policy): string {
-  switch (p.id) {
-    case "none":
-      return "ごみ箱は置かず、見回りもしない。営業時間中は掃除しない。";
-    case "patrol":
-      return `${p.patrollers} 人が通りを往復する。近く (±25 m) ではほとんど捨てず、見つかれば過料。制度が知られているので、ほかの場所でも捨てる人は 4 分の 3 に。`;
-    case "bins":
-      return `100 m おきに 1 つ、1 つに ${p.binCapacity} 個まで。満杯だと 6 割の人は横に置いていく。`;
-    case "smart":
-      return `圧縮して ${p.binCapacity} 個まで入る。8 割で通知が飛び、30 分で回収に来る。`;
-    case "clean":
-      return "ごみ箱も見回りもなし。2 時間おきに通り全体のごみを拾う。";
-  }
+  const parts: string[] = [];
+  parts.push(p.dualFare ? "市民 200 円・市民以外 400 円" : "全員 230 円");
+  if (p.expressDrivers > 0) parts.push(`普通 ${p.expressDrivers} 台分を観光特急 (500 円) 1 時間 ${expressPerHour(p)} 台に`);
+  if (p.originFill < 1) parts.push(`京都駅では定員の ${Math.round(p.originFill * 100)}% まで乗せる`);
+  return parts.join("、");
 }
 
-export function LitterSim() {
+export function KyotoBusSim() {
   const [scenarioId, setScenarioId] = useState(scenarios[0].id);
-  const [pair, setPair] = useState<Record<World, PolicyId>>({ a: scenarios[0].pair[0], b: scenarios[0].pair[1] });
-  const [speed, setSpeed] = useState<Speed>(360);
+  const [speed, setSpeed] = useState<Speed>(90);
   const [playing, setPlaying] = useState(false);
   const [autoStarted, setAutoStarted] = useState(false);
   const [seedOffset, setSeedOffset] = useState(0);
-  const [arrivalScale, setArrivalScale] = useState(1);
-  const [multiplier, setMultiplier] = useState<number | null>(null);
-  const [dump, setDump] = useState(0);
-  const [tuning, setTuning] = useState<Tuning>({ patrollers: 4, emptyEveryHours: 3 });
-  const [metric, setMetric] = useState<Metric>("street");
+  const [policyIds, setPolicyIds] = useState<Record<World, PolicyId> | null>(null);
+  const [elasticity, setElasticity] = useState(-0.3);
+  const [touristScale, setTouristScale] = useState(1);
+  const [buses, setBuses] = useState<number | null>(null);
+  const [metric, setMetric] = useState<"resident" | "tourist">("resident");
   const [stats, setStats] = useState<Record<World, SimStats> | null>(null);
   const [chartSeries, setChartSeries] = useState<ChartSeries[]>([]);
-  const [agg, setAgg] = useState<Record<World, SimStats> | null>(null);
-  /** 計算中なら終わった試行の数、計算していなければ null */
-  const [aggDone, setAggDone] = useState<number | null>(null);
-  const aggJobRef = useRef(0);
+  const [agg, setAgg] = useState<Record<World, AggregateStats> | null>(null);
+  const [aggBusy, setAggBusy] = useState(false);
 
   const scenario = getScenario(scenarioId);
   const params = useMemo<SimParams>(() => {
@@ -111,15 +96,16 @@ export function LitterSim() {
     return {
       ...base,
       seed: base.seed + seedOffset,
-      litterMultiplier: multiplier ?? base.litterMultiplier,
-      dumpPerBinHour: dump,
-      arrivals: base.arrivals.map((a) => ({ ...a, perHour: Math.round(a.perHour * arrivalScale) })),
+      elasticity,
+      touristPerHour: Math.round(base.touristPerHour * touristScale),
+      busesPerHour: buses ?? base.busesPerHour,
     };
-  }, [scenario, seedOffset, multiplier, dump, arrivalScale]);
+  }, [scenario, seedOffset, elasticity, touristScale, buses]);
 
+  const ids = policyIds ?? { a: scenario.policies[0], b: scenario.policies[1] };
   const policies = useMemo<Record<World, Policy>>(
-    () => ({ a: buildPolicy(pair.a, tuning), b: buildPolicy(pair.b, tuning) }),
-    [pair, tuning],
+    () => ({ a: POLICIES[ids.a], b: POLICIES[ids.b] }),
+    [ids.a, ids.b],
   );
 
   const simsRef = useRef<Record<World, SimState> | null>(null);
@@ -175,9 +161,6 @@ export function LitterSim() {
   useEffect(() => {
     reset();
     const id = requestAnimationFrame(() => {
-      // 計算中の試行は条件が古くなるので捨てる
-      aggJobRef.current++;
-      setAggDone(null);
       setAgg(null);
       publish();
     });
@@ -250,31 +233,20 @@ export function LitterSim() {
 
   const finished = stats ? stats.a.t >= params.durationSec : false;
 
-  // 重い場面では 100 回で数秒かかるので、1 回ずつ区切って画面を止めない
-  const RUNS = 100;
   const runAggregate = () => {
-    const job = ++aggJobRef.current;
-    const results: Record<World, SimStats[]> = { a: [], b: [] };
-    setAggDone(0);
-    const next = (i: number) => {
-      if (job !== aggJobRef.current) return;
-      if (i >= RUNS) {
-        setAgg({ a: averageStats(results.a), b: averageStats(results.b) });
-        setAggDone(null);
-        return;
-      }
-      results.a.push(runTrial(params, policies.a, i));
-      results.b.push(runTrial(params, policies.b, i));
-      setAggDone(i + 1);
-      setTimeout(() => next(i + 1), 0);
-    };
-    setTimeout(() => next(0), 20);
+    setAggBusy(true);
+    setTimeout(() => {
+      const runs = 100;
+      setAgg({ a: aggregate(params, policies.a, runs), b: aggregate(params, policies.b, runs) });
+      setAggBusy(false);
+    }, 20);
   };
 
-  const peak = Math.max(...params.arrivals.map((a) => a.perHour));
+  const dualRates = effectiveRates(params, POLICIES.dual);
+  const touristDrop = 1 - dualRates.tourist / params.touristPerHour;
 
   return (
-    <section className="space-y-4" aria-label="繁華街のポイ捨てのシミュレーション">
+    <section className="space-y-4" aria-label="京都の市バスの混雑対策のシミュレーション">
       {/* シナリオ選択 */}
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="シナリオ">
@@ -286,9 +258,9 @@ export function LitterSim() {
               aria-selected={sc.id === scenarioId}
               onClick={() => {
                 setScenarioId(sc.id);
-                setPair({ a: sc.pair[0], b: sc.pair[1] });
-                setArrivalScale(1);
-                setMultiplier(null);
+                setPolicyIds(null);
+                setTouristScale(1);
+                setBuses(null);
                 setPlaying(true);
               }}
               className={`rounded-lg border px-3 py-1.5 text-sm ${
@@ -337,13 +309,13 @@ export function LitterSim() {
               setPlaying(true);
             }}
             className="rounded-lg border border-border px-3 py-1.5 text-sm hover:border-accent"
-            title="乱数の種を変えて、別の 1 日を試す"
+            title="乱数の種を変えて、別の 1 回を試す"
           >
             別の乱数で
           </button>
           <div className="ml-auto flex items-center gap-1 text-xs" role="group" aria-label="再生速度">
             <span className="text-muted">速度</span>
-            {([120, 360, 900] as const).map((sp) => (
+            {([30, 90, 240] as const).map((sp) => (
               <button
                 key={sp}
                 type="button"
@@ -361,72 +333,49 @@ export function LitterSim() {
 
         <div className="mt-3 text-xs">
           <span className="font-mono text-muted">
-            {fmtHour(params.startHour, stats ? stats.a.t : 0)} / {fmtHour(params.startHour, params.durationSec)} まで
+            経過 {stats ? fmtClock(stats.a.t) : "0:00"} / {fmtClock(params.durationSec)}
           </span>
         </div>
 
         <details className="mt-3 text-sm">
           <summary className="cursor-pointer text-muted hover:text-foreground">詳細設定</summary>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted">
-                人出 ×{arrivalScale.toFixed(1)}（ピーク時 1 時間に {peak.toLocaleString()} 人がごみを出す）
-              </span>
-              <input
-                type="range"
-                min={0.3}
-                max={1.5}
-                step={0.1}
-                value={arrivalScale}
-                onChange={(e) => setArrivalScale(Number(e.target.value))}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted">
-                散らかった道で捨てやすくなる倍率 ×{params.litterMultiplier.toFixed(1)}（1 なら「ごみがごみを呼ぶ」効果なし）
-              </span>
-              <input
-                type="range"
-                min={1}
-                max={5}
-                step={0.5}
-                value={params.litterMultiplier}
-                onChange={(e) => setMultiplier(Number(e.target.value))}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted">見回りの人数 {tuning.patrollers} 人（400 m あたり）</span>
-              <input
-                type="range"
-                min={1}
-                max={8}
-                step={1}
-                value={tuning.patrollers}
-                onChange={(e) => setTuning((t) => ({ ...t, patrollers: Number(e.target.value) }))}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted">ふつうのごみ箱の回収間隔 {tuning.emptyEveryHours} 時間</span>
-              <input
-                type="range"
-                min={1}
-                max={6}
-                step={1}
-                value={tuning.emptyEveryHours}
-                onChange={(e) => setTuning((t) => ({ ...t, emptyEveryHours: Number(e.target.value) }))}
-              />
-            </label>
             <label className="flex flex-col gap-1 sm:col-span-2">
               <span className="text-xs text-muted">
-                家庭ごみなどの持ち込み: ごみ箱 1 つあたり 1 時間に {dump} 個
+                観光客の運賃への反応 (弾力性) {elasticity.toFixed(1)}: 400 円にすると観光客のバス利用が{" "}
+                {(touristDrop * 100).toFixed(0)}% 減る
               </span>
               <input
                 type="range"
-                min={0}
-                max={30}
-                step={2}
-                value={dump}
-                onChange={(e) => setDump(Number(e.target.value))}
+                min={-1}
+                max={0}
+                step={0.1}
+                value={elasticity}
+                onChange={(e) => setElasticity(Number(e.target.value))}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">
+                観光客の人数 ×{touristScale.toFixed(1)}（1 時間 {params.touristPerHour} 人）
+              </span>
+              <input
+                type="range"
+                min={0.6}
+                max={1.4}
+                step={0.1}
+                value={touristScale}
+                onChange={(e) => setTouristScale(Number(e.target.value))}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">1 時間に京都駅を出るバス {params.busesPerHour} 台</span>
+              <input
+                type="range"
+                min={6}
+                max={16}
+                step={1}
+                value={params.busesPerHour}
+                onChange={(e) => setBuses(Number(e.target.value))}
               />
             </label>
           </div>
@@ -440,46 +389,61 @@ export function LitterSim() {
           const policy = policies[w];
           return (
             <div key={w} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ background: WORLD_COLOR[w] }} aria-hidden />
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-sm" style={{ background: WORLD_COLOR[w] }} aria-hidden />
                 <label className="sr-only" htmlFor={`policy-${w}`}>
-                  {w === "a" ? "左" : "右"}の世界の対策
+                  {w === "a" ? "左" : "右"}の世界の方針
                 </label>
                 <select
                   id={`policy-${w}`}
-                  value={pair[w]}
+                  value={ids[w]}
                   onChange={(e) => {
-                    setPair((p) => ({ ...p, [w]: e.target.value as PolicyId }));
+                    setPolicyIds({ ...ids, [w]: e.target.value as PolicyId });
                     setPlaying(true);
                   }}
-                  className="min-w-0 flex-1 rounded-md border border-border bg-card px-2 py-1 text-sm font-bold"
+                  className="rounded-md border border-border bg-card px-2 py-1 text-base font-bold"
                 >
-                  {POLICY_ORDER.map((id) => (
+                  {POLICY_IDS.map((id) => (
                     <option key={id} value={id}>
-                      {buildPolicy(id, tuning).name}
+                      {POLICIES[id].name}
                     </option>
                   ))}
                 </select>
               </div>
-              <p className="mt-1 text-xs text-muted md:min-h-[2.5rem]">{describePolicy(policy)}</p>
+              <p className="mt-1 text-xs text-muted">
+                {describePolicy(policy)}。普通のバス 1 時間 {regularPerHour(params, policy)} 台。
+              </p>
               <canvas
                 ref={(el) => {
                   canvasRefs.current[w] = el;
                 }}
-                className="mx-auto mt-2 block h-auto w-full max-w-[360px]"
+                className="mx-auto mt-2 block h-auto w-full max-w-[380px]"
                 style={{ aspectRatio: `${CANVAS_W} / ${CANVAS_H}` }}
                 role="img"
-                aria-label={`${policy.name}の世界の通りの様子`}
+                aria-label={`${policy.name}の世界の路線とバスの様子`}
               />
-              <dl className="mt-3 grid gap-x-3 gap-y-1 text-sm sm:grid-cols-2">
-                <Stat label="ごみを出した人" value={st ? `${fmtInt(st.produced)} 人` : "–"} />
-                <Stat label="うち道に捨てた" value={st ? fmtPct(st.litterRate) : "–"} strong />
-                <Stat label="ポイ捨ての累計" value={st ? `${fmtInt(st.littered)} 個` : "–"} />
-                <Stat label="うちごみ箱からあふれた" value={st ? `${fmtInt(st.overflowed)} 個` : "–"} />
-                <Stat label="ごみ箱に入った" value={st ? `${fmtInt(st.binned)} 個` : "–"} />
-                <Stat label="過料を取られた人" value={st ? `${fmtInt(st.fined)} 人` : "–"} />
-                <Stat label="いま道にあるごみ" value={st ? `${fmtInt(st.street)} 個` : "–"} strong />
-                <Stat label="かかった手間" value={st ? `${st.laborHours.toFixed(1)} 人・時間` : "–"} />
+              <table className="mt-3 w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-muted">
+                    <th className="py-0.5 font-normal" />
+                    <th className="py-0.5 font-semibold" style={{ color: "var(--series-3)" }}>市民</th>
+                    <th className="py-0.5 font-semibold" style={{ color: "var(--series-4)" }}>観光客</th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono">
+                  <StatRow label="平均待ち時間" st={st} pick={(k) => fmtWait(k.avgWait)} />
+                  <StatRow label="満員で乗れなかった人" st={st} pick={(k) => fmtPct(k.leftBehindRate)} />
+                  <StatRow label="いま待っている人" st={st} pick={(k) => `${k.waiting} 人`} />
+                  <StatRow label="乗れた人" st={st} pick={(k) => `${k.boarded} 人`} />
+                </tbody>
+              </table>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+                <dt className="text-muted">あきらめて歩いた市民</dt>
+                <dd className="text-right font-mono font-semibold">{st ? `${st.resident.gaveUp} 人` : "–"}</dd>
+                <dt className="text-muted">運賃が上がってバスをやめた観光客</dt>
+                <dd className="text-right font-mono font-semibold">{st ? `${Math.round(st.touristShifted)} 人` : "–"}</dd>
+                <dt className="text-muted">運賃収入 (1 時間あたり)</dt>
+                <dd className="text-right font-mono font-semibold">{st ? fmtYen(st.revenuePerHour) : "–"}</dd>
               </dl>
             </div>
           );
@@ -489,31 +453,25 @@ export function LitterSim() {
       <Legend />
 
       {chartSeries.length > 0 && (
-        <TimeChart
-          series={chartSeries}
-          durationSec={params.durationSec}
-          startHour={params.startHour}
-          metric={metric}
-          onMetricChange={setMetric}
-        />
+        <TimeChart series={chartSeries} durationSec={params.durationSec} metric={metric} onMetricChange={setMetric} />
       )}
 
       {/* 統計 */}
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="text-base font-bold">乱数を変えて 100 日ずつ回した平均</h3>
+            <h3 className="text-base font-bold">乱数を変えて 100 回ずつ回した平均</h3>
             <p className="text-xs text-muted">
-              アニメーション 1 回だけでは偶然に左右されるので、同じ条件で 100 回試行して平均を取ります。
+              アニメーション 1 回だけでは偶然に左右されるので、同じ条件で 2 時間を 100 回試行して平均を取ります。
             </p>
           </div>
           <button
             type="button"
             onClick={runAggregate}
-            disabled={aggDone !== null}
+            disabled={aggBusy}
             className="rounded-lg border border-border px-3 py-1.5 text-sm hover:border-accent disabled:opacity-50"
           >
-            {aggDone !== null ? `計算中… ${aggDone} / ${RUNS}` : agg ? "もう一度計算" : "100 回試行する"}
+            {aggBusy ? "計算中…" : agg ? "もう一度計算" : "100 回試行する"}
           </button>
         </div>
         {agg && (
@@ -527,13 +485,34 @@ export function LitterSim() {
                 </tr>
               </thead>
               <tbody className="font-mono">
-                <AggRow label="道に捨てた人の割合" a={agg.a.litterRate} b={agg.b.litterRate} fmt={fmtPct} />
-                <AggRow label="ポイ捨ての累計" a={agg.a.littered} b={agg.b.littered} fmt={(v) => `${fmtInt(v)} 個`} />
-                <AggRow label="うちごみ箱からあふれた" a={agg.a.overflowed} b={agg.b.overflowed} fmt={(v) => `${fmtInt(v)} 個`} />
-                <AggRow label="終わりに道にあるごみ" a={agg.a.street} b={agg.b.street} fmt={(v) => `${fmtInt(v)} 個`} />
-                <AggRow label="道のごみが最も多いとき" a={agg.a.maxStreet} b={agg.b.maxStreet} fmt={(v) => `${fmtInt(v)} 個`} />
-                <AggRow label="過料を取られた人" a={agg.a.fined} b={agg.b.fined} fmt={(v) => `${v.toFixed(1)} 人`} />
-                <AggRow label="かかった手間" a={agg.a.laborHours} b={agg.b.laborHours} fmt={(v) => `${v.toFixed(1)} 人・時間`} />
+                <AggRow label="市民の平均待ち時間" a={agg.a.stats.resident.avgWait} b={agg.b.stats.resident.avgWait} fmt={fmtWait} />
+                <AggRow
+                  label="満員で乗れなかった市民"
+                  a={agg.a.stats.resident.leftBehindRate}
+                  b={agg.b.stats.resident.leftBehindRate}
+                  fmt={fmtPct}
+                />
+                <AggRow
+                  label="あきらめて歩いた市民"
+                  a={agg.a.stats.resident.gaveUp}
+                  b={agg.b.stats.resident.gaveUp}
+                  fmt={(v) => `${v.toFixed(1)} 人`}
+                />
+                <AggRow label="観光客の平均待ち時間" a={agg.a.stats.tourist.avgWait} b={agg.b.stats.tourist.avgWait} fmt={fmtWait} />
+                <AggRow
+                  label="満員で乗れなかった観光客"
+                  a={agg.a.stats.tourist.leftBehindRate}
+                  b={agg.b.stats.tourist.leftBehindRate}
+                  fmt={fmtPct}
+                />
+                <AggRow
+                  label="バスをやめた観光客 (2 時間)"
+                  a={agg.a.stats.touristShifted}
+                  b={agg.b.stats.touristShifted}
+                  fmt={(v) => `${v.toFixed(0)} 人`}
+                />
+                <AggRow label="運賃収入 (1 時間)" a={agg.a.stats.revenuePerHour} b={agg.b.stats.revenuePerHour} fmt={fmtYen} />
+                <AggRow label="普通のバスの所要 (京都駅→祇園)" a={agg.a.stats.avgTripSec} b={agg.b.stats.avgTripSec} fmt={fmtMin} />
               </tbody>
             </table>
           </div>
@@ -543,12 +522,21 @@ export function LitterSim() {
   );
 }
 
-function Stat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function StatRow({
+  label,
+  st,
+  pick,
+}: {
+  label: string;
+  st: SimStats | undefined;
+  pick: (k: KindStats) => string;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-2 border-t border-border py-0.5">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className={`font-mono ${strong ? "font-semibold" : ""}`}>{value}</dd>
-    </div>
+    <tr className="border-t border-border">
+      <td className="py-0.5 pr-2 font-sans text-xs text-muted">{label}</td>
+      <td className="py-0.5 pr-2 font-semibold">{st ? pick(st.resident) : "–"}</td>
+      <td className="py-0.5 font-semibold">{st ? pick(st.tourist) : "–"}</td>
+    </tr>
   );
 }
 
@@ -564,17 +552,16 @@ function AggRow({ label, a, b, fmt }: { label: string; a: number; b: number; fmt
 
 function Legend() {
   const items: { color: string; label: string; shape: string }[] = [
-    { color: "var(--foreground)", label: "飲み食いしながら歩く人", shape: "rounded-full opacity-60" },
-    { color: "var(--amber)", label: "ごみを手に持っている人", shape: "rounded-full" },
-    { color: "var(--coral)", label: "道に落ちているごみ (多い区画は塗りつぶし)", shape: "rounded-sm" },
-    { color: "var(--series-3)", label: "ごみ箱 (中の量。満杯で赤)", shape: "rounded-sm" },
-    { color: "var(--accent)", label: "見回りの人とそのまわり ±25 m", shape: "rotate-45" },
+    { color: "var(--series-3)", label: "市民", shape: "rounded-full" },
+    { color: "var(--series-4)", label: "観光客", shape: "rounded-full" },
+    { color: "var(--series-8)", label: "観光特急 (「特」) と特急が止まる停留所", shape: "rounded-sm" },
+    { color: "var(--muted)", label: "四角 = バス (中の色 = 乗っている人の内訳、満員で上まで埋まる)", shape: "rounded-sm" },
   ];
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" aria-label="凡例">
       {items.map((it) => (
         <li key={it.label} className="inline-flex items-center gap-1.5">
-          <span className={`inline-block h-2.5 w-2.5 ${it.shape}`} style={{ background: it.color }} aria-hidden />
+          <span className={`inline-block h-3 w-3 ${it.shape}`} style={{ background: it.color }} aria-hidden />
           {it.label}
         </li>
       ))}
