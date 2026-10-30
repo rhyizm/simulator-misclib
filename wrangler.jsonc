@@ -17,13 +17,29 @@
   ],
   // カスタムドメイン。Cloudflare 上に misclib.com のゾーンがあれば
   // デプロイ時に DNS レコードと証明書が自動で作られる。
+  // wrangler deploy はここにないドメインを外すので、ダッシュボードで足したドメインも必ずここに書く。
   "routes": [
     {
       "pattern": "simu.misclib.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "lab.misclib.com",
       "custom_domain": true
     }
   ],
   "observability": {
     "enabled": true
+  },
+  // PR ごとのプレビュー (Workers Builds の `npx wrangler preview`) の設定。
+  // プレビューは本番の設定を引き継がないので、このブロックがないと失敗する。
+  // service binding は自動で引き継がれないため明示する (プレビューからは本番の Worker を呼ぶ)。
+  "previews": {
+    "services": [
+      {
+        "binding": "WORKER_SELF_REFERENCE",
+        "service": "simulator-misclib"
+      }
+    ]
   }
 }

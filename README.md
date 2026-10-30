@@ -57,13 +57,16 @@ npm run preview    # OpenNext でビルドし、ローカルの Workers ラン�
 npm run deploy     # ビルドして Cloudflare Workers へデプロイ
 ```
 
-- 本番 URL は `https://simu.misclib.com` です。`wrangler.jsonc` の `routes` に custom_domain として設定してあり、
+- 本番 URL は `https://simu.misclib.com` です (`lab.misclib.com` でも同じ Worker を配信)。`wrangler.jsonc` の `routes` に custom_domain として設定してあり、
   Cloudflare アカウントに `misclib.com` のゾーンがあれば、デプロイ時に DNS レコードと証明書が自動で作られます。
 - CI やこのような自動セッションからデプロイするには、環境変数 `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit、Workers Routes: Edit、Zone DNS: Edit、Account Settings: Read) と
   `CLOUDFLARE_ACCOUNT_ID` が必要です。
 - 設定は `wrangler.jsonc` と `open-next.config.ts` にあります。
   全ページがビルド時に静的生成されるので、キャッシュは R2 / KV を使わず Workers Static Assets を利用しています。
+- ドメインはダッシュボードではなく `wrangler.jsonc` の `routes` に追加してください。`wrangler deploy` は設定ファイルにないドメインを外します。
+- PR などの本番以外のブランチは、Workers Builds が `npx wrangler preview` で Preview を作ります。
+  Preview は本番の設定を引き継がないので、`wrangler.jsonc` の `previews` ブロック (service binding を含む) を消さないでください。
 - Cloudflare ダッシュボードから Git 連携でデプロイする場合は、ビルドコマンドに `npx opennextjs-cloudflare build`、
   デプロイコマンドに `npx opennextjs-cloudflare deploy` を指定してください。
 - ローカルで `next dev` を使うときは `.dev.vars` に `NEXTJS_ENV=development` を置きます (gitignore 済み、`.dev.vars.example` をコピー)。
