@@ -11,6 +11,8 @@ import { Speed30Sim } from "./speed30/Speed30Sim";
 import { Speed30Article } from "./speed30/article";
 import { KyotoBusSim } from "./kyoto-bus/KyotoBusSim";
 import { KyotoBusArticle } from "./kyoto-bus/article";
+import { StaggeredCommuteSim } from "./staggered-commute/StaggeredCommuteSim";
+import { StaggeredCommuteArticle } from "./staggered-commute/article";
 
 export interface SimModule {
   /** インタラクティブなシミュレーション本体 (client component) */
@@ -26,4 +28,5 @@ export const simModules: Record<string, SimModule> = {
   toilet: { Sim: ToiletSim, Article: ToiletArticle },
   speed30: { Sim: Speed30Sim, Article: Speed30Article },
   "kyoto-bus": { Sim: KyotoBusSim, Article: KyotoBusArticle },
+  "staggered-commute": { Sim: StaggeredCommuteSim, Article: StaggeredCommuteArticle },
 };
