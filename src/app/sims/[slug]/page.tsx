@@ -77,8 +77,6 @@ export default async function SimPage(props: PageProps<"/sims/[slug]">) {
           ← 一覧へ
         </Link>
         <div className="flex items-center gap-2 font-mono text-xs text-muted">
-          <span>#{String(entry.no).padStart(2, "0")}</span>
-          <span>·</span>
           <time dateTime={entry.date}>{formatDate(entry.date)}</time>
           <span>·</span>
           <span>{entry.tags.join(" / ")}</span>
