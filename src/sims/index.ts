@@ -13,6 +13,10 @@ import { KyotoBusSim } from "./kyoto-bus/KyotoBusSim";
 import { KyotoBusArticle } from "./kyoto-bus/article";
 import { RiceReserveSim } from "./rice-reserve/RiceReserveSim";
 import { RiceReserveArticle } from "./rice-reserve/article";
+import { StaggeredCommuteSim } from "./staggered-commute/StaggeredCommuteSim";
+import { StaggeredCommuteArticle } from "./staggered-commute/article";
+import { FoodTaxSim } from "./food-tax/FoodTaxSim";
+import { FoodTaxArticle } from "./food-tax/article";
 
 export interface SimModule {
   /** インタラクティブなシミュレーション本体 (client component) */
@@ -29,4 +33,6 @@ export const simModules: Record<string, SimModule> = {
   speed30: { Sim: Speed30Sim, Article: Speed30Article },
   "kyoto-bus": { Sim: KyotoBusSim, Article: KyotoBusArticle },
   "rice-reserve": { Sim: RiceReserveSim, Article: RiceReserveArticle },
+  "staggered-commute": { Sim: StaggeredCommuteSim, Article: StaggeredCommuteArticle },
+  "food-tax": { Sim: FoodTaxSim, Article: FoodTaxArticle },
 };
