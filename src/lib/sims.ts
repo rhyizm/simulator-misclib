@@ -77,7 +77,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "staggered-commute",
-    no: 8,
     title: "時差出勤、ピークの車を 1 割ずらすと朝の渋滞はどれだけ消えるのか",
     question: "鹿児島市が呼びかける「7:30〜8:30 を避けて」。1 割の車が時間をずらすと、待ち時間は 1 割減るだけなのか。",
     summary:
@@ -87,7 +86,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "food-tax",
-    no: 9,
     title: "食料品の消費税 1%、得をするのは誰なのか",
     question: "2 年間だけ 8% を 1% に。お金持ちほど得なのか、低所得ほど助かるのか。同じお金を配るのと何が違うのか。",
     summary:
