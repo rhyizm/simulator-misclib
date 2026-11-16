@@ -59,7 +59,7 @@ const pages = [
   { file: "default.png", kicker: SITE_TAGLINE, title: "社会の「もしも」を、動かして眺める。", sub: `${SITE_NAME} は身近な社会課題をシミュレーションにして、何が効いているのかを目で確かめる実験室です。` },
   ...simEntries.map((e) => ({
     file: `${e.slug}.png`,
-    kicker: `#${String(e.no).padStart(2, "0")} · ${e.tags.join(" / ")}`,
+    kicker: `${e.date.replaceAll("-", ".")} · ${e.tags.join(" / ")}`,
     title: e.title,
     sub: e.question,
   })),

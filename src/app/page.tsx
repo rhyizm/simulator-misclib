@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatDate, simEntries } from "@/lib/sims";
+import { formatDate, simEntries, simEntriesByDate } from "@/lib/sims";
 import { COMPANY, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 
@@ -64,15 +64,13 @@ export default function Home() {
           <h2 className="text-lg font-bold">シミュレーション一覧</h2>
         </div>
         <ul className="grid gap-4 sm:grid-cols-2">
-          {[...simEntries].sort((a, b) => b.no - a.no).map((e) => (
+          {simEntriesByDate().map((e) => (
             <li key={e.slug}>
               <Link
                 href={`/sims/${e.slug}`}
                 className="group block h-full rounded-xl border border-border bg-card p-5 transition hover:border-accent"
               >
                 <div className="flex items-center gap-2 font-mono text-xs text-muted">
-                  <span>#{String(e.no).padStart(2, "0")}</span>
-                  <span>·</span>
                   <time dateTime={e.date}>{formatDate(e.date)}</time>
                 </div>
                 <h3 className="mt-2 text-lg font-bold leading-snug group-hover:text-accent">{e.title}</h3>

@@ -4,7 +4,6 @@
  */
 export interface SimEntry {
   slug: string;
-  no: number;
   title: string;
   question: string;
   summary: string;
@@ -15,7 +14,6 @@ export interface SimEntry {
 export const simEntries: SimEntry[] = [
   {
     slug: "escalator",
-    no: 1,
     title: "エスカレーター、片側を空けるべきか、両側に立つべきか",
     question: "歩く人のために片側を空ける習慣は、全体として得なのか損なのか。",
     summary:
@@ -25,7 +23,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "truck-berth",
-    no: 2,
     title: "トラックの荷待ち、予約制にすれば消えるのか",
     question: "物流センターの荷降ろしを先着順からバース予約制に変えると、ドライバーの待ち時間はどこへ行くのか。",
     summary:
@@ -35,7 +32,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "quake-alert",
-    no: 3,
     title: "地震の警報、どこで鳴らせばいちばん多くの人を守れるか",
     question: "空振りを恐れれば見逃しが増え、見逃しを恐れれば空振りで信頼が削られる。その釣り合いはどこにあるのか。",
     summary:
@@ -45,7 +41,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "toilet",
-    no: 4,
     title: "女性トイレの行列は、便器を何個ずつに分ければ消えるのか",
     question: "同じ広さのまま男女の便器の数を分け直すと、待ち時間はどこで釣り合うのか。",
     summary:
@@ -55,7 +50,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "speed30",
-    no: 5,
     title: "生活道路の 30 km/h、何秒遅れて何人助かるのか",
     question: "中央線のない道の法定速度が 60 km/h から 30 km/h に下がった。その遅れと安全は釣り合っているのか。",
     summary:
@@ -65,7 +59,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "kyoto-bus",
-    no: 6,
     title: "京都の市バス、観光客の運賃を上げれば市民は乗れるようになるのか",
     question: "市民 200 円・観光客 400 円の「二重運賃」。満員で通り過ぎるバスは、値段で止められるのか。",
     summary:
@@ -75,7 +68,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "rice-reserve",
-    no: 7,
     title: "備蓄米、何万トン持てば次の米騒動を止められるのか",
     question: "政府は備蓄米の買い戻しを決めた。倉庫の米の量と、出す速さと、買い戻す時期。米の値段を決めるのはどれなのか。",
     summary:
@@ -85,7 +77,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "staggered-commute",
-    no: 8,
     title: "時差出勤、ピークの車を 1 割ずらすと朝の渋滞はどれだけ消えるのか",
     question: "鹿児島市が呼びかける「7:30〜8:30 を避けて」。1 割の車が時間をずらすと、待ち時間は 1 割減るだけなのか。",
     summary:
@@ -95,7 +86,6 @@ export const simEntries: SimEntry[] = [
   },
   {
     slug: "food-tax",
-    no: 9,
     title: "食料品の消費税 1%、得をするのは誰なのか",
     question: "2 年間だけ 8% を 1% に。お金持ちほど得なのか、低所得ほど助かるのか。同じお金を配るのと何が違うのか。",
     summary:
@@ -107,6 +97,11 @@ export const simEntries: SimEntry[] = [
 
 export function getSimEntry(slug: string): SimEntry | undefined {
   return simEntries.find((e) => e.slug === slug);
+}
+
+/** 新しい日付が先。同じ日付なら simEntries で後ろに書いたものが先。 */
+export function simEntriesByDate(): SimEntry[] {
+  return [...simEntries].reverse().sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function formatDate(iso: string): string {
