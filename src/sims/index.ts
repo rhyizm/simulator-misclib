@@ -17,6 +17,8 @@ import { StaggeredCommuteSim } from "./staggered-commute/StaggeredCommuteSim";
 import { StaggeredCommuteArticle } from "./staggered-commute/article";
 import { FoodTaxSim } from "./food-tax/FoodTaxSim";
 import { FoodTaxArticle } from "./food-tax/article";
+import { BearSim } from "./bear/BearSim";
+import { BearArticle } from "./bear/article";
 
 export interface SimModule {
   /** インタラクティブなシミュレーション本体 (client component) */
@@ -35,4 +37,5 @@ export const simModules: Record<string, SimModule> = {
   "rice-reserve": { Sim: RiceReserveSim, Article: RiceReserveArticle },
   "staggered-commute": { Sim: StaggeredCommuteSim, Article: StaggeredCommuteArticle },
   "food-tax": { Sim: FoodTaxSim, Article: FoodTaxArticle },
+  bear: { Sim: BearSim, Article: BearArticle },
 };
