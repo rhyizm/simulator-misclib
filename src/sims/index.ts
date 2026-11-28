@@ -19,6 +19,8 @@ import { FoodTaxSim } from "./food-tax/FoodTaxSim";
 import { FoodTaxArticle } from "./food-tax/article";
 import { WalkthroughGateSim } from "./walkthrough-gate/WalkthroughGateSim";
 import { WalkthroughGateArticle } from "./walkthrough-gate/article";
+import { AmbulanceFeeSim } from "./ambulance-fee/AmbulanceFeeSim";
+import { AmbulanceFeeArticle } from "./ambulance-fee/article";
 
 export interface SimModule {
   /** インタラクティブなシミュレーション本体 (client component) */
@@ -38,4 +40,5 @@ export const simModules: Record<string, SimModule> = {
   "staggered-commute": { Sim: StaggeredCommuteSim, Article: StaggeredCommuteArticle },
   "food-tax": { Sim: FoodTaxSim, Article: FoodTaxArticle },
   "walkthrough-gate": { Sim: WalkthroughGateSim, Article: WalkthroughGateArticle },
+  "ambulance-fee": { Sim: AmbulanceFeeSim, Article: AmbulanceFeeArticle },
 };
